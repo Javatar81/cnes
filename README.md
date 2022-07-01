@@ -1,2 +1,2 @@
 # cnes
-Cloud Native EventStore
+Cloud Native EventStore - The event store for containers

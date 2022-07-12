@@ -42,3 +42,13 @@ Especially if one has to store data, that might be read again after 20, 30, 40 y
 an advantage, if the format is still readable or may converted easily in an actual format.
 
 As a picture tells more than 1,000 words, here is a picture ![Write to an Event Store](https://github.com/Javatar81/cnes/blob/2ef262104530b6f49d660ef810e48e09dc5b87e6/EventStore_write.png)
+
+This is the use case, when multiple containers are writing events into just one event-store. This is
+good for many occasions, but in some cases, it may be necessary have a certain container write to just one
+event-store as shown below:
+[Every container writes to his own event-store](https://github.com/Javatar81/cnes/blob/796679ddb564ecd4ecd8328f47a86129b3b87fed/graphs/EventStore_write_many.png)
+This is also good for balancing the node or making sure, some information is written to a certain and different
+place. The use cases are as different as they can be.
+
+But how to rebuild a certain and timely cohorent state if the information is spread to multiple
+event-stores?

@@ -40,3 +40,5 @@ An other great advantage is the event-store may store all its data in ASCII or i
 simple text format. So the chance it will be readable after decades is quite good.
 Especially if one has to store data, that might be read again after 20, 30, 40 years, it is 
 an advantage, if the format is still readable or may converted easily in an actual format.
+
+As a picture tells more than 1,000 words, here is a picture [Write to an Event Store](https://github.com/Javatar81/cnes/blob/c1e7ccc7a0e55d3db78eb8adba4bce218895ef7d/EventStore_write.png)

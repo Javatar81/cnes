@@ -1,7 +1,7 @@
-# cnes
+# CNES
 Cloud Native EventStore - The event store for containers
 
-## Containers for writing and reading your data
+## A brief introduction to CNES
 
 In several use cases it DOES matter in which sequence data is coming in. 
 To do this with a RDBMS is possible, but causing some effort.

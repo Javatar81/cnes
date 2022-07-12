@@ -45,8 +45,9 @@ As a picture tells more than 1,000 words, here is a picture ![Write to an Event 
 
 This is the use case, when multiple containers are writing events into just one event-store. This is
 good for many occasions, but in some cases, it may be necessary have a certain container write to just one
-event-store as shown below:
-![Every container writes to his own event-store](https://github.com/Javatar81/cnes/blob/796679ddb564ecd4ecd8328f47a86129b3b87fed/graphs/EventStore_write_many.png)
+event-store as shown below:  
+![Every container writes to his own event-store](https://github.com/Javatar81/cnes/blob/796679ddb564ecd4ecd8328f47a86129b3b87fed/graphs/EventStore_write_many.png)  
+
 This is also good for balancing the node or making sure, some information is written to a certain and different
 place. The use cases are as different as they can be.
 

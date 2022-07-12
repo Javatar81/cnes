@@ -1,5 +1,5 @@
 # CNES
-Cloud Native EventStore - The event store for containers
+Cloud Native Event-Store - The event store for containers
 
 ## A brief introduction to CNES
 

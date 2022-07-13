@@ -1,0 +1,25 @@
+FROM registry.access.redhat.com/ubi8/openjdk-11:1.11 AS build
+COPY --chown=185 mvnw /code/mvnw
+COPY --chown=185 .mvn /code/.mvn
+COPY --chown=185 pom.xml /code/
+RUN mkdir -p /code/src/test/resources/tmp && chown 185 /code/src/test/resources/tmp
+USER 185
+WORKDIR /code
+RUN ./mvnw -B org.apache.maven.plugins:maven-dependency-plugin:3.1.2:go-offline
+COPY src /code/src
+RUN ./mvnw package 
+
+FROM quay.io/quarkus/quarkus-micro-image:1.0
+WORKDIR /work/
+COPY --from=build /code/target/*.jar /work/application
+RUN chown 1001 /work \
+    && chmod "g+rwX" /work \
+    && chown 1001:root /work \
+    && mkdir /var/log/jstore \
+    && chown 1001:root /var/log/jstore 
+COPY --chown=1001:root target/*.jar /work/application
+
+EXPOSE 8080
+USER 1001
+
+CMD ["./application", "-Dquarkus.http.host=0.0.0.0"]

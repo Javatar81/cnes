@@ -1,0 +1,78 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  annotations:
+    alpha.image.policy.openshift.io/resolve-names: '*'
+    app.openshift.io/vcs-ref: ''
+    app.openshift.io/vcs-uri: 'https://github.com/Javatar81/cnes.git'
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"cnes-jstore:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"cnes-jstore\")].image","pause":"false"}]
+  name: cnes-jstore
+  labels:
+    app: cnes-jstore
+    app.kubernetes.io/component: cnes-jstore
+    app.kubernetes.io/instance: cnes-jstore
+    app.kubernetes.io/name: cnes-jstore
+    app.kubernetes.io/part-of: cnes
+    app.openshift.io/runtime: java
+    app.openshift.io/runtime-version: openjdk-11-ubi8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cnes-jstore
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: cnes-jstore
+        deploymentconfig: cnes-jstore
+    spec:
+      containers:
+        - resources: {}
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          name: cnes-jstore
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: org.cnes.jstore.store-path
+              value: /home/jboss/logs
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8443
+              protocol: TCP
+            - containerPort: 8778
+              protocol: TCP
+          imagePullPolicy: Always
+          terminationMessagePolicy: File
+          image: >-
+            image-registry.openshift-image-registry.svc:5000/bschmeli-cnest/cnes-jstore@sha256:240cc8dd819177f4d1245db5a9028ad1241fe2098a2360937d42733736a20a1e
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

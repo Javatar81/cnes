@@ -1,0 +1,35 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: cnes-jstore
+  labels:
+    app: cnes-jstore
+    app.kubernetes.io/component: cnes-jstore
+    app.kubernetes.io/instance: cnes-jstore
+    app.kubernetes.io/name: cnes-jstore
+    app.kubernetes.io/part-of: cnes
+    app.openshift.io/runtime: java
+    app.openshift.io/runtime-version: openjdk-11-ubi8
+  annotations:
+    app.openshift.io/vcs-ref: ''
+    app.openshift.io/vcs-uri: 'https://github.com/Javatar81/cnes.git'
+spec:
+  ports:
+    - name: 8080-tcp
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: 8443-tcp
+      protocol: TCP
+      port: 8443
+      targetPort: 8443
+    - name: 8778-tcp
+      protocol: TCP
+      port: 8778
+      targetPort: 8778
+  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  sessionAffinity: None
+  selector:
+    app: cnes-jstore
+    deploymentconfig: cnes-jstore

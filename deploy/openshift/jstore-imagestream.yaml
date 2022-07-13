@@ -1,0 +1,18 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  annotations:
+    app.openshift.io/vcs-ref: ''
+    app.openshift.io/vcs-uri: 'https://github.com/Javatar81/cnes.git'
+  name: cnes-jstore
+  labels:
+    app: cnes-jstore
+    app.kubernetes.io/component: cnes-jstore
+    app.kubernetes.io/instance: cnes-jstore
+    app.kubernetes.io/name: cnes-jstore
+    app.kubernetes.io/part-of: cnes
+    app.openshift.io/runtime: java
+    app.openshift.io/runtime-version: openjdk-11-ubi8
+spec:
+  lookupPolicy:
+    local: false

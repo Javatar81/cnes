@@ -1,0 +1,51 @@
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  annotations:
+    app.openshift.io/vcs-ref: ''
+    app.openshift.io/vcs-uri: 'https://github.com/Javatar81/cnes.git'
+  name: cnes-jstore
+  labels:
+    app: cnes-jstore
+    app.kubernetes.io/component: cnes-jstore
+    app.kubernetes.io/instance: cnes-jstore
+    app.kubernetes.io/name: cnes-jstore
+    app.kubernetes.io/part-of: cnes
+    app.openshift.io/runtime: java
+    app.openshift.io/runtime-version: openjdk-11-ubi8
+spec:
+  nodeSelector: null
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'cnes-jstore:latest'
+  resources: {}
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        namespace: openshift
+        name: 'java:openjdk-11-ubi8'
+      env:
+        - name: S2I_SOURCE_DEPLOYMENTS_FILTER
+          value: app lib quarkus quarkus-run.jar
+        - name: JAVA_OPTIONS
+          value: '-Dquarkus.http.host=0.0.0.0'
+        - name: AB_JOLOKIA_OFF
+          value: 'true'
+        - name: MAVEN_S2I_ARTIFACT_DIRS
+          value: target/quarkus-app
+  postCommit: {}
+  source:
+    type: Git
+    git:
+      uri: 'https://github.com/Javatar81/cnes.git'
+    contextDir: /components/jstore
+  triggers:
+    - type: ImageChange
+      imageChange: {}
+    - type: ConfigChange
+  runPolicy: Serial

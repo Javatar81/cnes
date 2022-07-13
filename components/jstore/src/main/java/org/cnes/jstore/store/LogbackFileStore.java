@@ -46,7 +46,12 @@ public class LogbackFileStore implements FileStore{
 		this.storeDir = storeDir;
 		LOGGER.debug("Store dir is '{}'", storeDir.toString());
 		if (!Files.exists(storeDir)) {
-			throw new ReadingException("Cannot resolve store dir");
+			LOGGER.warn("Cannot resolve store dir. Creating it...");
+			try {
+				Files.createDirectory(storeDir);
+			} catch (IOException e) {
+				throw new WritingException(e);
+			}
 		}
 		this.context = new LoggerContext();
 		this.encoder = new PatternLayoutEncoder();

@@ -12,10 +12,10 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import org.cnes.jstore.FileStoreFactory;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
 import org.cnes.jstore.store.FileStore;
-import org.cnes.jstore.store.FileStoreFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

@@ -28,6 +28,10 @@ spec:
         app: cnes-jstore
         deploymentconfig: cnes-jstore
     spec:
+      volumes:
+        - name: jstorage
+          persistentVolumeClaim:
+            claimName: jstorage
       containers:
         - resources: {}
           readinessProbe:
@@ -61,6 +65,9 @@ spec:
             - containerPort: 8778
               protocol: TCP
           imagePullPolicy: Always
+          volumeMounts:
+            - name: jstorage
+              mountPath: /home/jboss/logs
           terminationMessagePolicy: File
           image: >-
             image-registry.openshift-image-registry.svc:5000/bschmeli-cnest/cnes-jstore@sha256:240cc8dd819177f4d1245db5a9028ad1241fe2098a2360937d42733736a20a1e

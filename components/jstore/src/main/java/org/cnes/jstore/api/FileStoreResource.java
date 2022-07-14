@@ -19,6 +19,8 @@ import org.cnes.jstore.store.FileStore;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 @Path("/store/{eventType}")
 public class FileStoreResource {
 	
@@ -26,6 +28,11 @@ public class FileStoreResource {
 	FileStoreFactory storeFactory;
 	@Inject
 	ObjectMapper mapper;
+	private MeterRegistry registry;
+	
+	public FileStoreResource(MeterRegistry registry) {
+		this.registry = registry;
+	}
 	
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -47,6 +54,7 @@ public class FileStoreResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     public void post(@PathParam("eventType") String eventType, EventBody body) {
+    	registry.counter("org.cnes.events.stored." + eventType).increment();
     	EventType type = new EventType(eventType);
     	FileStore fileStore = storeFactory.getFileStore(type);
     	fileStore.append(body.getPayload().toString());

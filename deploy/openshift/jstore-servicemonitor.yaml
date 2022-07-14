@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: jstore-monitor
+  name: jstore-monitor
+spec:
+  endpoints:
+  - interval: 30s
+    port: 8080-tcp
+    scheme: http
+    path: /q/metrics
+  selector:
+    matchLabels:
+      app: cnes-jstore

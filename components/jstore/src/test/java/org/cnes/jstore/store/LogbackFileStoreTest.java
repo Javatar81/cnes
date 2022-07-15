@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.cnes.jstore.ConfigurationProperties;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
 import org.junit.jupiter.api.AfterAll;
@@ -30,14 +31,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class LogbackFileStoreTest {
 	
-	private static Path LOG_DIR = Paths.get("src/test/resources/tmp");
+	private static final Path LOG_DIR = Paths.get("src/test/resources/tmp");
 	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStore.class);
+	private static ConfigurationProperties config;
 	
 	@BeforeAll
 	static void setUp() throws IOException {
 		if (!Files.exists(LOG_DIR)) {
 			Files.createDirectory(LOG_DIR);
 		}
+		config = ConfigurationProperties.builder().withStoreArchivePattern("%d{yyyy-MM-dd_HH-mm}").withStoreDir(LOG_DIR.toString()).build();
 	}
 	
 	@AfterAll
@@ -53,7 +56,7 @@ class LogbackFileStoreTest {
 	@Test
 	void appendSingleEvent() throws VerificationException {
 		EventType type1 = new EventType("Type1");
-		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
+		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		store.append("testdata");
 		assertLogFileExistsFor(store);
 		store.verify(1);
@@ -62,7 +65,7 @@ class LogbackFileStoreTest {
 	@Test
     void appendTwoEventsWithSameStore() throws VerificationException {
 		EventType type2 = new EventType("Type2");
-		LogbackFileStore store = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
+		LogbackFileStore store = new LogbackFileStore(type2, new ObjectMapper(), config);
 		store.append("testdata1");
 		store.append("testdata2");
 		assertLogFileExistsFor(store);
@@ -73,8 +76,8 @@ class LogbackFileStoreTest {
     void appendMultipleEventsWithTwoStores() throws VerificationException {
 		final int ENTRIES = 100;
 		EventType type2 = new EventType("Type2");
-		LogbackFileStore store1 = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
-		LogbackFileStore store2 = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
+		LogbackFileStore store1 = new LogbackFileStore(type2, new ObjectMapper(), config);
+		LogbackFileStore store2 = new LogbackFileStore(type2, new ObjectMapper(), config);
 		List<String> testData = new ArrayList<>();
 		for (int i = 0; i < ENTRIES; i++) {
 			testData.add("testdata" + i);
@@ -104,14 +107,14 @@ class LogbackFileStoreTest {
 	@Test
 	void peekFileNotExists() {
 		EventType type1 = new EventType("peekNoFile");
-		FileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
+		FileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		assertFalse(store.peek().isPresent(), "File should not exist");
 	}
 	
 	@Test
 	void peekEmpty() throws IOException {
 		EventType type1 = new EventType("peekEmpty");
-		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(),LOG_DIR);
+		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		try {
 			assertLogFileExistsFor(store);
 			Files.delete(store.fileStorePath());
@@ -125,7 +128,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekSingleEvent() {
 		EventType type1 = new EventType("peekSingle");
-		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
+		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		Event event = store.append("dummy");
 		assertLogFileExistsFor(store);
 		Optional<Event> peek = store.peek();
@@ -136,7 +139,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekTwoEvents() {
 		EventType type1 = new EventType("peekTwo");
-		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
+		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		assertLogFileExistsFor(store);
 		Event event1 = store.append("dummy1");
 		Optional<Event> peek1 = store.peek();
@@ -153,7 +156,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekThreeEvents() {
 		EventType type1 = new EventType("peekTwo");
-		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
+		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		assertLogFileExistsFor(store);
 		store.append("dummy1");
 		Optional<Event> peek1 = store.peek();
@@ -172,7 +175,7 @@ class LogbackFileStoreTest {
 	@Test
 	void topThreeEventsOfThree() {
 		EventType type1 = new EventType("topThreeOfThree");
-		FileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
+		FileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		store.append("dummy1");
 		store.append("dummy2");
 		store.append("dummy3");

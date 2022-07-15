@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.cnes.jstore.ConfigurationProperties;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,9 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.FileAppender;
+import ch.qos.logback.core.rolling.RollingFileAppender;
+import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
+import ch.qos.logback.core.rolling.TriggeringPolicy;
 
 public class LogbackFileStore implements FileStore{
 	private static final String PATTERN = "%msg%n";
@@ -36,15 +40,17 @@ public class LogbackFileStore implements FileStore{
 	private final ObjectWriter jsonWriter;
 	private final ObjectReader jsonReader;
 	private final Path storeDir;
+	private final ConfigurationProperties config;
 	private Optional<Event> top = Optional.empty();
 	
-	public LogbackFileStore(EventType type, ObjectMapper mapper, Path storeDir) {
+	public LogbackFileStore(EventType type, ObjectMapper mapper, ConfigurationProperties config) {
 		LOGGER.debug("Creating log store instance for type '{}'", type);
 		this.jsonReader = mapper.readerFor(Event.class);
 		this.jsonWriter = mapper.writerFor(Event.class);
 		this.type = type;
-		this.storeDir = storeDir;
-		LOGGER.debug("Store dir is '{}'", storeDir.toString());
+		this.config = config;
+		this.storeDir = Paths.get(config.getStoreDir());
+		LOGGER.debug("Store dir is '{}'", storeDir);
 		if (!Files.exists(storeDir)) {
 			LOGGER.warn("Cannot resolve store dir. Creating it...");
 			try {
@@ -64,18 +70,30 @@ public class LogbackFileStore implements FileStore{
 	
 	Logger createLogger(EventType type) {
 		LOGGER.debug("Creating new logger instance for type '{}'", type);
-		FileAppender<ILoggingEvent> fileAppender = new FileAppender<>();
+		RollingFileAppender<ILoggingEvent> fileAppender = new RollingFileAppender<>();
 		String path = fileStorePath().toString();
 		fileAppender.setFile(path);
 		LOGGER.debug("Setting file appender to '{}'", path);
 		fileAppender.setEncoder(encoder);
+		fileAppender.setImmediateFlush(true);
 		fileAppender.setContext(context);
+		fileAppender.setAppend(true);
+		fileAppender.setTriggeringPolicy(createTriggeringPolicy(fileAppender));
 		fileAppender.start();
 		Logger newLogger = context.getLogger(LogbackFileStore.class);
-		newLogger.addAppender(fileAppender);
 		newLogger.setLevel(Level.DEBUG);
 		newLogger.setAdditive(false); 
+		newLogger.addAppender(fileAppender);
 		return newLogger;
+	}
+	
+	private TriggeringPolicy<ILoggingEvent> createTriggeringPolicy(FileAppender<ILoggingEvent> parent) {
+		TimeBasedRollingPolicy<ILoggingEvent> triggeringPolicy = new TimeBasedRollingPolicy<>();
+		triggeringPolicy.setParent(parent);
+		triggeringPolicy.setContext(context);
+		triggeringPolicy.setFileNamePattern(storeDir.resolve("archived") + "/" + type + config.getStoreArchivePattern() + ".log");
+		triggeringPolicy.start();
+		return triggeringPolicy;
 	}
 	
 	@Override
@@ -146,6 +164,10 @@ public class LogbackFileStore implements FileStore{
 	}
 	
 	Path fileStorePath() {
-		return storeDir.resolve(Paths.get(type + ".log"));
+		return storeDir.resolve(Paths.get(getLogFileName()));
+	}
+
+	private String getLogFileName() {
+		return type + ".log";
 	}
 }

@@ -51,24 +51,26 @@ class LogbackFileStoreTest {
 	}
 	 
 	@Test
-	void appendSingleEvent() {
+	void appendSingleEvent() throws VerificationException {
 		EventType type1 = new EventType("Type1");
 		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
 		store.append("testdata");
 		assertLogFileExistsFor(store);
+		store.verify(1);
 	}
 	
 	@Test
-    void appendTwoEventsWithSameStore() {
+    void appendTwoEventsWithSameStore() throws VerificationException {
 		EventType type2 = new EventType("Type2");
 		LogbackFileStore store = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
 		store.append("testdata1");
 		store.append("testdata2");
 		assertLogFileExistsFor(store);
+		store.verify(2);
 	}
 	
 	@Test
-    void appendMultipleEventsWithTwoStores() {
+    void appendMultipleEventsWithTwoStores() throws VerificationException {
 		final int ENTRIES = 100;
 		EventType type2 = new EventType("Type2");
 		LogbackFileStore store1 = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
@@ -94,6 +96,7 @@ class LogbackFileStoreTest {
 		List<String> topEventData = topEvents.stream().map(Event::getData).collect(Collectors.toList());
 		Collections.reverse(topEventData);
 		assertEquals(testData, topEventData);
+		store1.verify(ENTRIES);
 	}
 	
 	
@@ -123,9 +126,11 @@ class LogbackFileStoreTest {
 	void peekSingleEvent() {
 		EventType type1 = new EventType("peekSingle");
 		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
-		store.append("dummy");
+		Event event = store.append("dummy");
 		assertLogFileExistsFor(store);
-		assertEquals("dummy", store.peek().map(Event::getData).orElse(""));
+		Optional<Event> peek = store.peek();
+		assertEquals("dummy", peek.map(Event::getData).orElse(""));
+		assertEquals(event.getCreated(), peek.map(Event::getCreated).orElse(null));
 	}
 	
 	@Test
@@ -133,12 +138,14 @@ class LogbackFileStoreTest {
 		EventType type1 = new EventType("peekTwo");
 		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), LOG_DIR);
 		assertLogFileExistsFor(store);
-		store.append("dummy1");
+		Event event1 = store.append("dummy1");
 		Optional<Event> peek1 = store.peek();
 		assertEquals("dummy1", peek1.map(Event::getData).orElse(""));
-		store.append("dummy2");
+		assertEquals(event1.getCreated(), peek1.map(Event::getCreated).orElse(null));
+		Event event2 = store.append("dummy2");
 		Optional<Event> peek2 = store.peek();
 		assertEquals("dummy2", peek2.map(Event::getData).orElse(""));
+		assertEquals(event2.getCreated(), peek2.map(Event::getCreated).orElse(null));
 		assertEquals(peek1.map(Event::getId), peek2.flatMap(Event::getPredecessor));
 		
 	}

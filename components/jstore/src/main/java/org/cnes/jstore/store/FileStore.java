@@ -11,6 +11,8 @@ public interface FileStore {
 
 	Optional<Event> peek();
 
-	void append(String data);
+	Event append(String data);
+
+	void verify(int n) throws VerificationException;
 
 }

@@ -8,6 +8,8 @@ import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.cnes.jstore.store.VerificationException;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -42,7 +44,7 @@ public final class Event implements Serializable{
 		this.type = type;
 		this.data = data;
 		this.predecessor = predecessor.map(Event::getId).orElse(null);
-		this.id = Identifier.create(now, this.data, Optional.ofNullable(this.predecessor));
+		this.id = Identifier.create(this.created, this.data, Optional.ofNullable(this.predecessor));
 	}
 	
 	public String getData() {
@@ -65,6 +67,13 @@ public final class Event implements Serializable{
 
 	public EventType getType() {
 		return type;
+	}
+	
+	public void verify() throws VerificationException {
+		Identifier recalculatedId = Identifier.create(this.created, this.getData(), this.getPredecessor());
+		if(!recalculatedId.equals(this.getId())) {
+			throw new VerificationException(recalculatedId, this.getId(), toString() + " is not valid");
+		}
 	}
 
 	@Override

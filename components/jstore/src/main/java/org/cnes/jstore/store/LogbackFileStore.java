@@ -79,11 +79,16 @@ public class LogbackFileStore implements FileStore{
 	}
 	
 	@Override
-	public void append(String data) {
+	public Event append(String data) {
 		Event event = new Event(type, data, top);
 		try {
-			logger.debug(jsonWriter.writeValueAsString(event));
+			String valueAsString = jsonWriter.writeValueAsString(event);
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Writing '{}'", valueAsString);
+			}
+			logger.debug(valueAsString);
 			this.top = peek();
+			return event;
 		} catch (JsonProcessingException e) {
 			throw new WritingException(e);
 		}
@@ -97,7 +102,6 @@ public class LogbackFileStore implements FileStore{
 		} catch (IOException e) {
 			throw new ReadingException(e);
 		}
-		
 	}
 	
 	@Override
@@ -109,6 +113,13 @@ public class LogbackFileStore implements FileStore{
 			return topAsc;
 		} catch (IOException e) {
 			throw new ReadingException(e);
+		}
+	}
+	
+	@Override
+	public void verify(int n) throws VerificationException {
+		for (Event event : top(n)) {
+			event.verify();
 		}
 	}
 	

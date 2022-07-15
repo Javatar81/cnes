@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.cnes.jstore.model.Event;
+import org.cnes.jstore.model.EventType;
 
 public interface FileStore {
 
@@ -14,5 +15,11 @@ public interface FileStore {
 	Event append(String data);
 
 	void verify(int n) throws VerificationException;
+
+	long size();
+
+	EventType getType();
+
+	void delete();
 
 }

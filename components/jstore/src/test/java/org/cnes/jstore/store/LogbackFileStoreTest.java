@@ -116,12 +116,12 @@ class LogbackFileStoreTest {
 		EventType type1 = new EventType("peekEmpty");
 		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		try {
-			assertLogFileExistsFor(store);
-			Files.delete(store.fileStorePath());
 			Files.createFile(store.fileStorePath());
 			assertFalse(store.peek().isPresent(), "File should be empty");
 		} finally {
-			Files.delete(store.fileStorePath());
+			if (Files.exists(store.fileStorePath())) {
+				Files.delete(store.fileStorePath());
+			}
 		}
 	}
 	
@@ -139,8 +139,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekTwoEvents() {
 		EventType type1 = new EventType("peekTwo");
-		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
-		assertLogFileExistsFor(store);
+		FileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
 		Event event1 = store.append("dummy1");
 		Optional<Event> peek1 = store.peek();
 		assertEquals("dummy1", peek1.map(Event::getData).orElse(""));
@@ -157,7 +156,6 @@ class LogbackFileStoreTest {
 	void peekThreeEvents() {
 		EventType type1 = new EventType("peekTwo");
 		LogbackFileStore store = new LogbackFileStore(type1, new ObjectMapper(), config);
-		assertLogFileExistsFor(store);
 		store.append("dummy1");
 		Optional<Event> peek1 = store.peek();
 		assertEquals("dummy1", peek1.map(Event::getData).orElse(""));

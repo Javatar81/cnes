@@ -3,8 +3,8 @@ package org.cnes.jstore.api;
 import java.util.List;
 import java.util.Optional;
 
-import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -17,21 +17,18 @@ import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
 import org.cnes.jstore.store.FileStore;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.micrometer.core.instrument.MeterRegistry;
 
 @Path("/store/{eventType}")
 public class FileStoreResource {
 	
-	@Inject
-	FileStoreFactory storeFactory;
-	@Inject
-	ObjectMapper mapper;
-	private MeterRegistry registry;
 	
-	public FileStoreResource(MeterRegistry registry) {
+	private final FileStoreFactory storeFactory;
+	private final MeterRegistry registry;
+	
+	public FileStoreResource(MeterRegistry registry, FileStoreFactory storeFactory) {
 		this.registry = registry;
+		this.storeFactory = storeFactory;
 	}
 	
     @GET
@@ -58,5 +55,11 @@ public class FileStoreResource {
     	EventType type = new EventType(eventType);
     	FileStore fileStore = storeFactory.getFileStore(type);
     	fileStore.append(body.getPayload().toString());
+    }
+    
+    @DELETE
+    public void delete(@PathParam("eventType") String eventType) {
+    	EventType type = new EventType(eventType);
+    	storeFactory.removeFileStore(type);
     }
 }

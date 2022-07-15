@@ -33,13 +33,12 @@ import ch.qos.logback.core.rolling.TriggeringPolicy;
 public class LogbackFileStore implements FileStore{
 	private static final String PATTERN = "%msg%n";
 	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LogbackFileStore.class);
-	private final Logger logger;
 	private final EventType type;
-	private final PatternLayoutEncoder encoder;
-	private final LoggerContext context;
 	private final ObjectWriter jsonWriter;
 	private final ObjectReader jsonReader;
 	private final Path storeDir;
+	private LoggerContext context;
+	private Logger logger;
 	private final ConfigurationProperties config;
 	private Optional<Event> top = Optional.empty();
 	
@@ -50,25 +49,30 @@ public class LogbackFileStore implements FileStore{
 		this.type = type;
 		this.config = config;
 		this.storeDir = Paths.get(config.getStoreDir());
-		LOGGER.debug("Store dir is '{}'", storeDir);
-		if (!Files.exists(storeDir)) {
-			LOGGER.warn("Cannot resolve store dir. Creating it...");
-			try {
-				Files.createDirectory(storeDir);
-			} catch (IOException e) {
-				throw new WritingException(e);
+	}
+
+	private void initializeIfNecessary() {
+		if (logger == null) {
+			LOGGER.debug("Store dir is '{}'", storeDir);
+			if (!Files.exists(storeDir)) {
+				LOGGER.warn("Cannot resolve store dir. Creating it...");
+				try {
+					Files.createDirectory(storeDir);
+				} catch (IOException e) {
+					throw new WritingException(e);
+				}
 			}
+			this.context = new LoggerContext();
+			PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+			encoder.setPattern(PATTERN);
+			encoder.setContext(context);
+	        encoder.start();
+			this.logger = createLogger(type, encoder);
+	        LOGGER.debug("Started encoder with pattern '{}'", PATTERN);
 		}
-		this.context = new LoggerContext();
-		this.encoder = new PatternLayoutEncoder();
-		encoder.setPattern(PATTERN);
-		encoder.setContext(context);
-        encoder.start();
-		this.logger = createLogger(type);
-        LOGGER.debug("Started encoder with pattern '{}'", PATTERN);
 	}
 	
-	Logger createLogger(EventType type) {
+	Logger createLogger(EventType type, PatternLayoutEncoder encoder) {
 		LOGGER.debug("Creating new logger instance for type '{}'", type);
 		RollingFileAppender<ILoggingEvent> fileAppender = new RollingFileAppender<>();
 		String path = fileStorePath().toString();
@@ -98,6 +102,7 @@ public class LogbackFileStore implements FileStore{
 	
 	@Override
 	public Event append(String data) {
+		initializeIfNecessary();
 		Event event = new Event(type, data, top);
 		try {
 			String valueAsString = jsonWriter.writeValueAsString(event);
@@ -115,10 +120,14 @@ public class LogbackFileStore implements FileStore{
 	@Override
 	public Optional<Event> peek() {
 		Path path = fileStorePath();
-		try(Stream<String> lines = Files.lines(path)) {
-			return top(lines, 1).findFirst();
-		} catch (IOException e) {
-			throw new ReadingException(e);
+		if (Files.exists(path)) {
+			try(Stream<String> lines = Files.lines(path)) {
+				return top(lines, 1).findFirst();
+			} catch (IOException e) {
+				throw new ReadingException(e);
+			}
+		} else {
+			return Optional.empty();
 		}
 	}
 	
@@ -135,9 +144,32 @@ public class LogbackFileStore implements FileStore{
 	}
 	
 	@Override
+	public EventType getType() {
+		return type;
+	}
+
+	@Override
+	public long size() {
+		try(Stream<String> lines = Files.lines(fileStorePath())) {
+			return lines.count();
+		} catch (IOException e) {
+			throw new ReadingException(e);
+		}
+	}
+	
+	@Override
 	public void verify(int n) throws VerificationException {
 		for (Event event : top(n)) {
 			event.verify();
+		}
+	}
+	
+	@Override
+	public void delete() {
+		try {
+			Files.delete(fileStorePath());
+		} catch (IOException e) {
+			throw new WritingException(e);
 		}
 	}
 	

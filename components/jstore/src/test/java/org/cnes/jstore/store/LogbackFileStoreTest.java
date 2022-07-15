@@ -9,9 +9,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.cnes.jstore.model.Event;
@@ -24,10 +28,11 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class LogbackFileStoreTest {
+class LogbackFileStoreTest {
 	
 	private static Path LOG_DIR = Paths.get("src/test/resources/tmp");
 	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStore.class);
+	
 	@BeforeAll
 	static void setUp() throws IOException {
 		if (!Files.exists(LOG_DIR)) {
@@ -63,15 +68,35 @@ public class LogbackFileStoreTest {
 	}
 	
 	@Test
-    void appendTwoEventsWithTwoStores() {
+    void appendMultipleEventsWithTwoStores() {
+		final int ENTRIES = 100;
 		EventType type2 = new EventType("Type2");
 		LogbackFileStore store1 = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
 		LogbackFileStore store2 = new LogbackFileStore(type2, new ObjectMapper(), LOG_DIR);
-		store1.append("testdata1");
-		store2.append("testdata2");
+		List<String> testData = new ArrayList<>();
+		for (int i = 0; i < ENTRIES; i++) {
+			testData.add("testdata" + i);
+		}
+		for (Iterator<String> iterator = testData.iterator(); iterator.hasNext();) {
+			String dataForStore1 = iterator.next();
+			store1.append(dataForStore1);
+			assertEquals(store1.peek().get().getData(), dataForStore1);
+			assertEquals(store2.peek().get().getData(), dataForStore1);
+			String dataForStore2 = iterator.next();
+			store2.append(dataForStore2);
+			assertEquals(store1.peek().get().getData(), dataForStore2);
+			assertEquals(store2.peek().get().getData(), dataForStore2);
+		}
 		assertLogFileExistsFor(store1);
 		assertLogFileExistsFor(store2);
+		List<Event> topEvents = store1.top(ENTRIES);
+		assertEquals(ENTRIES, topEvents.size());
+		List<String> topEventData = topEvents.stream().map(Event::getData).collect(Collectors.toList());
+		Collections.reverse(topEventData);
+		assertEquals(testData, topEventData);
 	}
+	
+	
 	
 	@Test
 	void peekFileNotExists() {
@@ -150,6 +175,8 @@ public class LogbackFileStoreTest {
 		assertEquals("dummy2",top3.get(1).getData());
 		assertEquals("dummy1",top3.get(2).getData());
 	}
+	
+	
 	
 	private void assertLogFileExistsFor(LogbackFileStore store) {
 		Path path = store.fileStorePath();

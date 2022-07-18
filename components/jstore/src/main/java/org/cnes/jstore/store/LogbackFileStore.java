@@ -148,7 +148,7 @@ public class LogbackFileStore implements FileStore{
 		Path path = fileStorePath();
 		if (Files.exists(path)) {
 			try(Stream<String> lines = Files.lines(path)) {
-				return top(lines, 1).findFirst();
+				return top(lines, fileStorePath(), 1).findFirst();
 			} catch (IOException e) {
 				throw new ReadingException(e);
 			}
@@ -161,8 +161,8 @@ public class LogbackFileStore implements FileStore{
 	public List<Event> top(int n) {
 		Path path = fileStorePath();
 		try(Stream<String> lines = Files.lines(path)) {
-			List<Event> topAsc = top(lines, n).collect(Collectors.toList());
-			LOGGER.trace("Found {} events in file", topAsc.size());
+			List<Event> topAsc = top(lines, fileStorePath(), n).collect(Collectors.toList());
+			LOGGER.debug("Found {} events in file", topAsc.size());
 			if (isArchivedFiles() && topAsc.size() < n) {
 				List<File> archivedFiles = getArchivedFiles();
 				LOGGER.debug("Reading {} archived files", archivedFiles.size());
@@ -183,7 +183,7 @@ public class LogbackFileStore implements FileStore{
 		File archive = archives.get(archiveNum);
 		LOGGER.debug("Reading next {} entries from {}", n, archive.getAbsolutePath());
 		try(Stream<String> archivedLines = Files.lines(Paths.get(archive.getAbsolutePath()))) {
-			List<Event> collectedFromArchive = top(archivedLines, n).collect(Collectors.toList());
+			List<Event> collectedFromArchive = top(archivedLines, Paths.get(archive.getAbsolutePath()), n).collect(Collectors.toList());
 			if (n - collectedFromArchive.size() > 0 && archives.size() > archiveNum + 1) {
 				List<Event> collectedFromNextArchive = readArchived(n - collectedFromArchive.size(), archiveNum + 1, archives);
 				collectedFromNextArchive.addAll(collectedFromArchive);
@@ -193,11 +193,10 @@ public class LogbackFileStore implements FileStore{
 		}
 	}
 	
-	private Stream<Event> top(Stream<String> lines, int n) throws IOException {
-		Path path = fileStorePath();
+	private Stream<Event> top(Stream<String> lines, Path path, int n) throws IOException {
 		try(Stream<String> linesForCount = Files.lines(path)) {
 			long lineCount = linesForCount.count();
-			LOGGER.trace("Found {} lines", lineCount);
+			LOGGER.debug("Found {} lines", lineCount);
 			if (lineCount > 0) {
 				long skipLines = n;
 				if (n > lineCount) {

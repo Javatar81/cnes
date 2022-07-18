@@ -232,14 +232,17 @@ class LogbackFileStoreTest {
 		Files.write(archiveFileYesterday, archiveContent.getBytes());
 		assertEquals(event7.getData(), store.top(1).get(0).getData());
 		List<Event> events = store.top(3);
+		assertEquals(3, events.size());
 		for (int i = 7; i > 4; i--) {
 			assertEquals("dummy" + i, events.get(7 - i).getData());
 		}
 		events = store.top(4);
+		assertEquals(4, events.size());
 		for (int i = 7; i > 3; i--) {
 			assertEquals("dummy" + i, events.get(7 - i).getData());
 		}
 		events = store.top(5);
+		assertEquals(5, events.size());
 		for (int i = 7; i > 2; i--) {
 			assertEquals("dummy" + i, events.get(7 - i).getData());
 		}

@@ -1,12 +1,15 @@
 package org.cnes.jstore.store;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,6 +42,7 @@ public class LogbackFileStore implements FileStore{
 	private final Path storeDir;
 	private LoggerContext context;
 	private Logger logger;
+	private TimeBasedRollingPolicy<ILoggingEvent> triggeringPolicy;
 	private final ConfigurationProperties config;
 	private Optional<Event> top = Optional.empty();
 	
@@ -85,20 +89,41 @@ public class LogbackFileStore implements FileStore{
 		fileAppender.setTriggeringPolicy(createTriggeringPolicy(fileAppender));
 		fileAppender.start();
 		Logger newLogger = context.getLogger(LogbackFileStore.class);
-		newLogger.setLevel(Level.DEBUG);
+		newLogger.setLevel(Level.WARN);
 		newLogger.setAdditive(false); 
 		newLogger.addAppender(fileAppender);
 		return newLogger;
 	}
 	
 	private TriggeringPolicy<ILoggingEvent> createTriggeringPolicy(FileAppender<ILoggingEvent> parent) {
-		TimeBasedRollingPolicy<ILoggingEvent> triggeringPolicy = new TimeBasedRollingPolicy<>();
+		triggeringPolicy = new TimeBasedRollingPolicy<>();
 		triggeringPolicy.setParent(parent);
 		triggeringPolicy.setContext(context);
-		triggeringPolicy.setFileNamePattern(storeDir.resolve("archived") + "/" + type + config.getStoreArchivePattern() + ".log");
+		triggeringPolicy.setFileNamePattern(getArchiveFolder() + "/" + type + config.getStoreArchivePattern() + ".log");
 		triggeringPolicy.start();
 		return triggeringPolicy;
 	}
+
+	Path getArchiveFolder() {
+		return storeDir.resolve("archived");
+	}
+	
+	private boolean isArchivedFiles() {
+		return Files.exists(getArchiveFolder());
+	}
+	
+    private List<File> getArchivedFiles() {
+    	Pattern pattern = Pattern.compile(type + ".*" + "\\.log");
+    	try (Stream<Path> walk = Files.walk(getArchiveFolder())) {
+		    return walk.sorted(Comparator.comparing(Path::getFileName).reversed())
+		        .map(Path::toFile)
+		        .filter(f -> f.getName().endsWith(".log"))
+		        .filter(f -> pattern.matcher(f.getName()).matches())
+		        .collect(Collectors.toList());
+		} catch (IOException e) {
+			throw new ReadingException(e);
+		}
+    }
 	
 	@Override
 	public Event append(String data) {
@@ -109,7 +134,8 @@ public class LogbackFileStore implements FileStore{
 			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug("Writing '{}'", valueAsString);
 			}
-			logger.debug(valueAsString);
+			//TODO AsyncAppender buffers events in a BlockingQueue. A worker thread created by AsyncAppender takes events from the head of the queue, and dispatches them to the single appender attached to AsyncAppender. Note that by default, AsyncAppender will drop events of level TRACE, DEBUG and INFO if its queue is 80% full. This strategy has an amazingly favorable effect on performance at the cost of event loss.
+			logger.warn(valueAsString);
 			this.top = peek();
 			return event;
 		} catch (JsonProcessingException e) {
@@ -136,11 +162,58 @@ public class LogbackFileStore implements FileStore{
 		Path path = fileStorePath();
 		try(Stream<String> lines = Files.lines(path)) {
 			List<Event> topAsc = top(lines, n).collect(Collectors.toList());
+			LOGGER.trace("Found {} events in file", topAsc.size());
+			if (isArchivedFiles() && topAsc.size() < n) {
+				List<File> archivedFiles = getArchivedFiles();
+				LOGGER.debug("Reading {} archived files", archivedFiles.size());
+				List<Event> archivedAsc = readArchived(n - topAsc.size(), 0, archivedFiles);
+				LOGGER.trace("Found {} events in archived files", archivedAsc.size());
+				archivedAsc.addAll(topAsc);
+				System.out.println(archivedAsc);
+				topAsc = archivedAsc;
+			}
 			Collections.reverse(topAsc);
 			return topAsc;
 		} catch (IOException e) {
 			throw new ReadingException(e);
 		}
+	}
+	
+	private List<Event> readArchived(int n, int archiveNum, List<File> archives) throws IOException {
+		File archive = archives.get(archiveNum);
+		LOGGER.debug("Reading next {} entries from {}", n, archive.getAbsolutePath());
+		try(Stream<String> archivedLines = Files.lines(Paths.get(archive.getAbsolutePath()))) {
+			List<Event> collectedFromArchive = top(archivedLines, n).collect(Collectors.toList());
+			if (n - collectedFromArchive.size() > 0 && archives.size() > archiveNum + 1) {
+				List<Event> collectedFromNextArchive = readArchived(n - collectedFromArchive.size(), archiveNum + 1, archives);
+				collectedFromNextArchive.addAll(collectedFromArchive);
+				collectedFromArchive = collectedFromNextArchive;
+			}
+			return collectedFromArchive;
+		}
+	}
+	
+	private Stream<Event> top(Stream<String> lines, int n) throws IOException {
+		Path path = fileStorePath();
+		try(Stream<String> linesForCount = Files.lines(path)) {
+			long lineCount = linesForCount.count();
+			LOGGER.trace("Found {} lines", lineCount);
+			if (lineCount > 0) {
+				long skipLines = n;
+				if (n > lineCount) {
+					skipLines = lineCount;
+				}
+				return lines.skip(lineCount - skipLines).map(t -> {
+					try {
+						return jsonReader.readValue(t);
+					} catch (JsonProcessingException e) {
+						throw new ReadingException(e);
+					}
+				});
+			} else {
+				return Stream.empty();
+			}
+		} 
 	}
 	
 	@Override
@@ -173,27 +246,7 @@ public class LogbackFileStore implements FileStore{
 		}
 	}
 	
-	private Stream<Event> top(Stream<String> lines, int n) throws IOException {
-		Path path = fileStorePath();
-		try(Stream<String> linesForCount = Files.lines(path)) {
-			long lineCount = linesForCount.count();
-			if (lineCount > 0) {
-				long skipLines = n;
-				if (n > lineCount) {
-					skipLines = lineCount;
-				}
-				return lines.skip(lineCount - skipLines).map(t -> {
-					try {
-						return jsonReader.readValue(t);
-					} catch (JsonProcessingException e) {
-						throw new ReadingException(e);
-					}
-				});
-			} else {
-				return Stream.empty();
-			}
-		} 
-	}
+	
 	
 	Path fileStorePath() {
 		return storeDir.resolve(Paths.get(getLogFileName()));

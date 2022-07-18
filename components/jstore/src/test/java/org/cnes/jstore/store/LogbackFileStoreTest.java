@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -27,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.exc.StreamWriteException;
+import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class LogbackFileStoreTest {
@@ -34,13 +38,16 @@ class LogbackFileStoreTest {
 	private static final Path LOG_DIR = Paths.get("src/test/resources/tmp");
 	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStore.class);
 	private static ConfigurationProperties config;
+	private static final String LOG_ARCHIVE_PATTERN ="yyyy-MM-dd";
+	
+	ObjectMapper mapper = new ObjectMapper();
 	
 	@BeforeAll
 	static void setUp() throws IOException {
 		if (!Files.exists(LOG_DIR)) {
 			Files.createDirectory(LOG_DIR);
 		}
-		config = ConfigurationProperties.builder().withStoreArchivePattern("%d{yyyy-MM-dd_HH-mm}").withStoreDir(LOG_DIR.toString()).build();
+		config = ConfigurationProperties.builder().withStoreArchivePattern("%d{"+ LOG_ARCHIVE_PATTERN + "}").withStoreDir(LOG_DIR.toString()).build();
 	}
 	
 	@AfterAll
@@ -182,6 +189,72 @@ class LogbackFileStoreTest {
 		assertEquals("dummy3",top3.get(0).getData());
 		assertEquals("dummy2",top3.get(1).getData());
 		assertEquals("dummy1",top3.get(2).getData());
+	}
+	
+	@Test
+	void topRolling1File() throws StreamWriteException, DatabindException, IOException, InterruptedException {
+		EventType type = new EventType("topRolling1File");
+		LogbackFileStore store = new LogbackFileStore(type, mapper, config);
+		Event event4 = store.append("dummy4");
+		Path archiveFile = createArchive(store, LocalDateTime.now());
+		Event event1 = new Event(type, "dummy1", Optional.empty());
+		Event event2 = new Event(type, "dummy2", Optional.empty());
+		Event event3 = new Event(type, "dummy3", Optional.empty());
+		String archiveContent = mapper.writeValueAsString(event1) + "\n" + mapper.writeValueAsString(event2) + "\n" + mapper.writeValueAsString(event3);
+		Files.write(archiveFile, archiveContent.getBytes());
+		assertEquals(event4.getData(), store.top(1).get(0).getData());
+		List<Event> events = store.top(3);
+		for (int i = 4; i > 1; i--) {
+			assertEquals("dummy" + i, events.get(4 - i).getData());
+		}
+		events = store.top(4);
+		for (int i = 4; i > 0; i--) {
+			assertEquals("dummy" + i, events.get(4 - i).getData());
+		}
+	}
+	
+	@Test
+	void topRolling2File() throws StreamWriteException, DatabindException, IOException, InterruptedException {
+		EventType type = new EventType("topRolling2File");
+		LogbackFileStore store = new LogbackFileStore(type, mapper, config);
+		Event event7 = store.append("dummy7");
+		Path archiveFileNow = createArchive(store, LocalDateTime.now());
+		Event event4 = new Event(type, "dummy4", Optional.empty());
+		Event event5 = new Event(type, "dummy5", Optional.empty());
+		Event event6 = new Event(type, "dummy6", Optional.empty());
+		String archiveContent = mapper.writeValueAsString(event4) + "\n" + mapper.writeValueAsString(event5) + "\n" + mapper.writeValueAsString(event6);
+		Files.write(archiveFileNow, archiveContent.getBytes());
+		Path archiveFileYesterday = createArchive(store, LocalDateTime.now().minusDays(1));
+		Event event1 = new Event(type, "dummy1", Optional.empty());
+		Event event2 = new Event(type, "dummy2", Optional.empty());
+		Event event3 = new Event(type, "dummy3", Optional.empty());
+		archiveContent = mapper.writeValueAsString(event1) + "\n" + mapper.writeValueAsString(event2) + "\n" + mapper.writeValueAsString(event3);
+		Files.write(archiveFileYesterday, archiveContent.getBytes());
+		assertEquals(event7.getData(), store.top(1).get(0).getData());
+		List<Event> events = store.top(3);
+		for (int i = 7; i > 4; i--) {
+			assertEquals("dummy" + i, events.get(7 - i).getData());
+		}
+		events = store.top(4);
+		for (int i = 7; i > 3; i--) {
+			assertEquals("dummy" + i, events.get(7 - i).getData());
+		}
+		events = store.top(5);
+		for (int i = 7; i > 2; i--) {
+			assertEquals("dummy" + i, events.get(7 - i).getData());
+		}
+	}
+	
+	private Path createArchive(LogbackFileStore store, LocalDateTime dateTime) throws IOException {
+		DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(LOG_ARCHIVE_PATTERN);
+		if (!Files.exists(store.getArchiveFolder())) {
+			Files.createDirectory(store.getArchiveFolder());
+		}
+		Path archiveFile = store.getArchiveFolder().resolve(store.getType() + timeFormatter.format(dateTime) + ".log");
+		if (!Files.exists(archiveFile)) {			
+			Files.createFile(archiveFile);
+		}
+		return archiveFile;
 	}
 	
 	

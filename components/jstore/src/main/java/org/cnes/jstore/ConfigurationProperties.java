@@ -9,7 +9,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class ConfigurationProperties {
 	@ConfigProperty(name = "org.cnes.jstore.store-path", defaultValue = "src/test/resources/")
 	String storeDir;
-	@ConfigProperty(name = "org.cnes.jstore.store-archive-pattern", defaultValue = "%d")
+	@ConfigProperty(name = "org.cnes.jstore.store-archive-pattern", defaultValue = "%d{yyyy-MM-dd}")
 	String storeArchivePattern;
 
 	private ConfigurationProperties(Builder builder) {

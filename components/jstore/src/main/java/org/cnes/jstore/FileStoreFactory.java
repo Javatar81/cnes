@@ -28,7 +28,7 @@ public class FileStoreFactory {
 	public FileStoreFactory(ObjectMapper mapper, ConfigurationProperties config) {
 		this.mapper = mapper;
 		this.config = config;
-		try (Stream<Path> fileWalk = Files.walk(Paths.get(config.getStoreDir()))){
+		try (Stream<Path> fileWalk = Files.walk(Paths.get(config.getStoreDir()), 1)){
 			fileWalk
 				.map(Path::getFileName)
 				.filter(f -> f.toString().endsWith(".log"))

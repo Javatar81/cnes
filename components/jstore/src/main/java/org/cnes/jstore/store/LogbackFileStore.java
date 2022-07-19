@@ -222,8 +222,15 @@ public class LogbackFileStore implements FileStore{
 
 	@Override
 	public long size() {
+		long size = 0;
 		try(Stream<String> lines = Files.lines(fileStorePath())) {
-			return lines.count();
+			size += lines.count();
+			for(File archive : getArchivedFiles()) {
+				try(Stream<String> archiveLines = Files.lines(Paths.get(archive.getAbsolutePath()))) {
+					size += archiveLines.count();
+				}
+			}
+			return size;
 		} catch (IOException e) {
 			throw new ReadingException(e);
 		}

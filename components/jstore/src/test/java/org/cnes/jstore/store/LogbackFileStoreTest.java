@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 import org.cnes.jstore.ConfigurationProperties;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
+import org.cnes.jstore.test.data.DataFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,8 @@ class LogbackFileStoreTest {
 	private static ConfigurationProperties config;
 	private static final String LOG_ARCHIVE_PATTERN ="yyyy-MM-dd";
 	
-	ObjectMapper mapper = new ObjectMapper();
+	private ObjectMapper mapper = new ObjectMapper();
+	private DataFactory factory = new DataFactory();
 	
 	@BeforeAll
 	static void setUp() throws IOException {
@@ -109,6 +111,23 @@ class LogbackFileStoreTest {
 		store1.verify(ENTRIES);
 	}
 	
+	@Test
+    void append1000Events() {
+		EventType type = new EventType("1000Events");
+		LogbackFileStore store = new LogbackFileStore(type, new ObjectMapper(), config);
+		for (int i = 0; i < 1000; i++) {
+			store.append(factory.generateMediumPayload());
+		}
+		
+		List<Event> top = store.top(1000);
+		Optional<Event> previous = Optional.empty();
+		for (Event evt: top) {
+			LocalDateTime previousDate = previous.map(Event::getCreated).orElse(evt.getCreated());
+			assertFalse(previousDate.isAfter(evt.getCreated()), 
+					String.format("Event %d hast timestamp before previous", top.indexOf(evt)));
+		}
+	}
+    
 	
 	
 	@Test

@@ -18,6 +18,7 @@ import org.cnes.jstore.model.EventType;
 import org.cnes.jstore.store.FileStore;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.smallrye.common.annotation.NonBlocking;
 
 @Path("/store/{eventType}")
 public class FileStoreResource {
@@ -49,6 +50,7 @@ public class FileStoreResource {
     }
     
     @POST
+    @NonBlocking
     @Consumes(MediaType.APPLICATION_JSON)
     public void post(@PathParam("eventType") String eventType, EventBody body) {
     	registry.counter("org.cnes.events.stored." + eventType).increment();

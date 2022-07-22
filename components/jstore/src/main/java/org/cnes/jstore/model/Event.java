@@ -37,6 +37,10 @@ public final class Event implements Serializable{
 		this.predecessor = predecessor;
 		this.type = null;
 	}
+	
+	public Event(EventType type, String data) {
+		this(type, data, Optional.empty());
+	}
 
 	public Event(EventType type, String data, Optional<Event> predecessor) {
 		LocalDateTime now = LocalDateTime.now();

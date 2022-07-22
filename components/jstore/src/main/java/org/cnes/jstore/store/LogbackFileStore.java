@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
+import ch.qos.logback.classic.AsyncAppender;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -41,8 +42,7 @@ public class LogbackFileStore implements FileStore{
 	private final ObjectReader jsonReader;
 	private final Path storeDir;
 	private LoggerContext context;
-	private Logger logger;
-	private TimeBasedRollingPolicy<ILoggingEvent> triggeringPolicy;
+	private Logger logWriter;
 	private final ConfigurationProperties config;
 	
 	public LogbackFileStore(EventType type, ObjectMapper mapper, ConfigurationProperties config) {
@@ -55,8 +55,8 @@ public class LogbackFileStore implements FileStore{
 	}
 
 	private void initializeIfNecessary() {
-		if (logger == null) {
-			LOGGER.debug("Store dir is '{}'", storeDir);
+		if (logWriter == null) {
+			LOGGER.info("Config is '{}'", config);
 			if (!Files.exists(storeDir)) {
 				LOGGER.warn("Cannot resolve store dir. Creating it...");
 				try {
@@ -70,13 +70,26 @@ public class LogbackFileStore implements FileStore{
 			encoder.setPattern(PATTERN);
 			encoder.setContext(context);
 	        encoder.start();
-			this.logger = createLogger(type, encoder);
+			this.logWriter = createLogger(type, encoder);
 	        LOGGER.debug("Started encoder with pattern '{}'", PATTERN);
 		}
 	}
 	
 	Logger createLogger(EventType type, PatternLayoutEncoder encoder) {
 		LOGGER.debug("Creating new logger instance for type '{}'", type);
+		RollingFileAppender<ILoggingEvent> fileAppender = createFileAppender(encoder);
+		Logger newLogger = context.getLogger(LogbackFileStore.class);
+		newLogger.setLevel(Level.WARN);
+		newLogger.setAdditive(false); 
+		if (config.isLogAsync()) {
+			createAsyncAppender(fileAppender, newLogger);
+		} else {			
+			newLogger.addAppender(fileAppender);
+		}
+		return newLogger;
+	}
+
+	private RollingFileAppender<ILoggingEvent> createFileAppender(PatternLayoutEncoder encoder) {
 		RollingFileAppender<ILoggingEvent> fileAppender = new RollingFileAppender<>();
 		String path = fileStorePath().toString();
 		fileAppender.setFile(path);
@@ -87,15 +100,20 @@ public class LogbackFileStore implements FileStore{
 		fileAppender.setAppend(true);
 		fileAppender.setTriggeringPolicy(createTriggeringPolicy(fileAppender));
 		fileAppender.start();
-		Logger newLogger = context.getLogger(LogbackFileStore.class);
-		newLogger.setLevel(Level.WARN);
-		newLogger.setAdditive(false); 
-		newLogger.addAppender(fileAppender);
-		return newLogger;
+		return fileAppender;
+	}
+
+	private void createAsyncAppender(RollingFileAppender<ILoggingEvent> fileAppender, Logger newLogger) {
+		AsyncAppender asyncAppender = new AsyncAppender();
+		asyncAppender.setContext(context);
+		asyncAppender.addAppender(fileAppender);
+		asyncAppender.setMaxFlushTime(1000);
+		asyncAppender.start();
+		newLogger.addAppender(asyncAppender);
 	}
 	
 	private TriggeringPolicy<ILoggingEvent> createTriggeringPolicy(FileAppender<ILoggingEvent> parent) {
-		triggeringPolicy = new TimeBasedRollingPolicy<>();
+		TimeBasedRollingPolicy<ILoggingEvent> triggeringPolicy = new TimeBasedRollingPolicy<>();
 		triggeringPolicy.setParent(parent);
 		triggeringPolicy.setContext(context);
 		triggeringPolicy.setFileNamePattern(getArchiveFolder() + "/" + type + config.getStoreArchivePattern() + ".log");
@@ -133,8 +151,7 @@ public class LogbackFileStore implements FileStore{
 			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug("Writing '{}'", valueAsString);
 			}
-			//TODO AsyncAppender buffers events in a BlockingQueue. A worker thread created by AsyncAppender takes events from the head of the queue, and dispatches them to the single appender attached to AsyncAppender. Note that by default, AsyncAppender will drop events of level TRACE, DEBUG and INFO if its queue is 80% full. This strategy has an amazingly favorable effect on performance at the cost of event loss.
-			logger.warn(valueAsString);
+			logWriter.warn(valueAsString);
 			return event;
 		} catch (JsonProcessingException e) {
 			throw new WritingException(e);
@@ -167,7 +184,6 @@ public class LogbackFileStore implements FileStore{
 				List<Event> archivedAsc = readArchived(n - topAsc.size(), 0, archivedFiles);
 				LOGGER.trace("Found {} events in archived files", archivedAsc.size());
 				archivedAsc.addAll(topAsc);
-				System.out.println(archivedAsc);
 				topAsc = archivedAsc;
 			}
 			Collections.reverse(topAsc);

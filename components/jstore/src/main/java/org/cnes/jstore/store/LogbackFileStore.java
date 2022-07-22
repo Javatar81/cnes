@@ -44,7 +44,6 @@ public class LogbackFileStore implements FileStore{
 	private Logger logger;
 	private TimeBasedRollingPolicy<ILoggingEvent> triggeringPolicy;
 	private final ConfigurationProperties config;
-	private Optional<Event> top = Optional.empty();
 	
 	public LogbackFileStore(EventType type, ObjectMapper mapper, ConfigurationProperties config) {
 		LOGGER.debug("Creating log store instance for type '{}'", type);
@@ -128,7 +127,7 @@ public class LogbackFileStore implements FileStore{
 	@Override
 	public Event append(String data) {
 		initializeIfNecessary();
-		Event event = new Event(type, data, top);
+		Event event = new Event(type, data, Optional.empty());
 		try {
 			String valueAsString = jsonWriter.writeValueAsString(event);
 			if (LOGGER.isDebugEnabled()) {
@@ -136,7 +135,6 @@ public class LogbackFileStore implements FileStore{
 			}
 			//TODO AsyncAppender buffers events in a BlockingQueue. A worker thread created by AsyncAppender takes events from the head of the queue, and dispatches them to the single appender attached to AsyncAppender. Note that by default, AsyncAppender will drop events of level TRACE, DEBUG and INFO if its queue is 80% full. This strategy has an amazingly favorable effect on performance at the cost of event loss.
 			logger.warn(valueAsString);
-			this.top = peek();
 			return event;
 		} catch (JsonProcessingException e) {
 			throw new WritingException(e);

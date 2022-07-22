@@ -13,6 +13,7 @@
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.version>2.10.2.Final</quarkus.platform.version>
+    <gatling.version>3.8.2</gatling.version>
     <skipITs>true</skipITs>
     <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
   </properties>
@@ -74,6 +75,18 @@
       <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.gatling</groupId>
+      <artifactId>gatling-http-java</artifactId>
+      <version>${gatling.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.gatling.highcharts</groupId>
+      <artifactId>gatling-charts-highcharts</artifactId>
+      <version>${gatling.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
@@ -86,6 +99,17 @@
   </dependencies>
   <build>
     <plugins>
+      <plugin>
+        <groupId>io.gatling</groupId>
+        <artifactId>gatling-maven-plugin</artifactId>
+        <version>4.2.2</version>
+         <configuration>
+          <runMultipleSimulations>true</runMultipleSimulations>
+          <includes>
+            <include>org.cnes.gatling.*</include>
+          </includes>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>${quarkus.platform.group-id}</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>

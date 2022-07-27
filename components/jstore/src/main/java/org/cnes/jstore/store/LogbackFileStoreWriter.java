@@ -24,6 +24,7 @@ import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import ch.qos.logback.core.rolling.TriggeringPolicy;
+import io.vertx.mutiny.core.eventbus.EventBus;
 
 public class LogbackFileStoreWriter implements FileStoreWriter{
 	private static final String PATTERN = "%msg%n";
@@ -33,14 +34,17 @@ public class LogbackFileStoreWriter implements FileStoreWriter{
 	private final FileStoreMeta meta;
 	private LoggerContext context;
 	private Logger logWriter;
+	private EventBus bus;
 	private final ConfigurationProperties config;
 	
-	public LogbackFileStoreWriter(EventType type, ObjectMapper mapper, ConfigurationProperties config) {
+	public LogbackFileStoreWriter(EventType type, ObjectMapper mapper, ConfigurationProperties config, EventBus bus) {
 		LOGGER.debug("Creating log store instance for type '{}'", type);
 		this.jsonWriter = mapper.writerFor(Event.class);
 		this.type = type;
 		this.config = config;
 		this.meta = new FileStoreMeta(Paths.get(config.getStoreDir()), type);
+		this.bus = bus;
+		bus.publish("createdStore", this.getType());
 	}
 
 	private void initializeIfNecessary() {
@@ -120,6 +124,7 @@ public class LogbackFileStoreWriter implements FileStoreWriter{
 				LOGGER.debug("Writing '{}'", valueAsString);
 			}
 			logWriter.warn(valueAsString);
+			bus.publish("appendedEvent", event);
 			return event;
 		} catch (JsonProcessingException e) {
 			throw new WritingException(e);

@@ -33,13 +33,22 @@ import com.fasterxml.jackson.core.exc.StreamWriteException;
 import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.vertx.mutiny.core.eventbus.EventBus;
+
 class LogbackFileStoreTest {
 	
 	private static final Path LOG_DIR = Paths.get("src/test/resources/tmp");
 	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStoreWriter.class);
 	private static ConfigurationProperties config;
 	private static final String LOG_ARCHIVE_PATTERN ="yyyy-MM-dd";
-	
+	private static EventBus bus = new EventBus(null) {
+		@Override
+		public EventBus publish(String message, Object event) {
+			// Do nothing in test
+			return this;
+			
+		}
+	};
 	private static ObjectMapper mapper = new ObjectMapper();
 	
 	@BeforeAll
@@ -69,7 +78,7 @@ class LogbackFileStoreTest {
 	void appendSingleEvent() throws VerificationException {
 		EventType type1 = new EventType("Type1");
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type1, mapper, config, bus);
 		store.append("testdata");
 		assertLogFileExistsFor(reader);
 		reader.verify(1);
@@ -79,7 +88,7 @@ class LogbackFileStoreTest {
     void appendTwoEventsWithSameStore() throws VerificationException {
 		EventType type2 = new EventType("Type2");
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type2, config);
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type2, new ObjectMapper(), config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type2, mapper, config, bus);
 		store.append("testdata1");
 		store.append("testdata2");
 		assertLogFileExistsFor(reader);
@@ -95,7 +104,7 @@ class LogbackFileStoreTest {
 				.build();
 		EventType type = new EventType("twoEventsWithSameAsyncStore");
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type, config);
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, new ObjectMapper(), asyncConfig);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, mapper, asyncConfig, bus);
 		store.append("testdata1");
 		store.append("testdata2");
 		Thread.sleep(1000);
@@ -107,8 +116,8 @@ class LogbackFileStoreTest {
     void appendMultipleEventsWithTwoStores() throws VerificationException {
 		final int ENTRIES = 100;
 		EventType type2 = new EventType("MultipleEventsWithTwoStores");
-		LogbackFileStoreWriter store1 = new LogbackFileStoreWriter(type2, new ObjectMapper(), config);
-		LogbackFileStoreWriter store2 = new LogbackFileStoreWriter(type2, new ObjectMapper(), config);
+		LogbackFileStoreWriter store1 = new LogbackFileStoreWriter(type2, mapper, config, bus);
+		LogbackFileStoreWriter store2 = new LogbackFileStoreWriter(type2, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type2, config);
 		
 		List<String> testData = new ArrayList<>();
@@ -135,7 +144,7 @@ class LogbackFileStoreTest {
 	@Test
     void append1000Events() {
 		EventType type = new EventType("1000Events");
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, new ObjectMapper(), config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, mapper, config, bus);
 		FileStoreReader reader = new LocalFileStoreReader(mapper, type, config);
 		for (int i = 0; i < 1000; i++) {
 			store.append("dummy" + i);
@@ -159,14 +168,14 @@ class LogbackFileStoreTest {
 	void peekFileNotExists() {
 		EventType type1 = new EventType("peekNoFile");
 		FileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
-		new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		new LogbackFileStoreWriter(type1, mapper, config, bus);
 		assertFalse(reader.peek().isPresent(), "File should not exist");
 	}
 	
 	@Test
 	void peekEmpty() throws IOException {
 		EventType type1 = new EventType("peekEmpty");
-		new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		new LogbackFileStoreWriter(type1, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
 		try {
 			Files.createFile(reader.meta.fileStorePath());
@@ -181,7 +190,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekSingleEvent() {
 		EventType type1 = new EventType("peekSingle");
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type1, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
 		Event event = store.append("dummy");
 		assertLogFileExistsFor(reader);
@@ -193,7 +202,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekTwoEvents() {
 		EventType type1 = new EventType("peekTwo");
-		FileStoreWriter store = new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		FileStoreWriter store = new LogbackFileStoreWriter(type1, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
 		Event event1 = store.append("dummy1");
 		Optional<Event> peek1 = reader.peek();
@@ -210,7 +219,7 @@ class LogbackFileStoreTest {
 	@Test
 	void peekThreeEvents() {
 		EventType type1 = new EventType("peekThree");
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type1, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
 		store.append("dummy1");
 		Optional<Event> peek1 = reader.peek();
@@ -229,7 +238,7 @@ class LogbackFileStoreTest {
 	@Test
 	void topThreeEventsOfThree() {
 		EventType type1 = new EventType("topThreeOfThree");
-		FileStoreWriter store = new LogbackFileStoreWriter(type1, new ObjectMapper(), config);
+		FileStoreWriter store = new LogbackFileStoreWriter(type1, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type1, config);
 		store.append("dummy1");
 		store.append("dummy2");
@@ -244,7 +253,7 @@ class LogbackFileStoreTest {
 	@Test
 	void topRolling1File() throws StreamWriteException, DatabindException, IOException, InterruptedException {
 		EventType type = new EventType("topRolling1File");
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, mapper, config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type, config);
 		Event event4 = store.append("dummy4");
 		Path archiveFile = createArchive(reader, LocalDateTime.now());
@@ -267,7 +276,7 @@ class LogbackFileStoreTest {
 	@Test
 	void topRolling2File() throws StreamWriteException, DatabindException, IOException, InterruptedException {
 		EventType type = new EventType("topRolling2File");
-		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, mapper, config);
+		LogbackFileStoreWriter store = new LogbackFileStoreWriter(type, mapper, config, bus);
 		LocalFileStoreReader reader = new LocalFileStoreReader(mapper, type, config);
 		Event event7 = store.append("dummy7");
 		Path archiveFileNow = createArchive(reader, LocalDateTime.now());

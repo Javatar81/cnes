@@ -20,6 +20,8 @@ import org.cnes.jstore.store.ReadingException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.vertx.mutiny.core.eventbus.EventBus;
+
 @ApplicationScoped
 public class FileStoreFactory {
 	
@@ -27,8 +29,9 @@ public class FileStoreFactory {
 	private Map<EventType, FileStoreReader> readers = new HashMap<>();
 	private ObjectMapper mapper;
 	private ConfigurationProperties config;
+	private EventBus bus;
 	
-	public FileStoreFactory(ObjectMapper mapper, ConfigurationProperties config) {
+	public FileStoreFactory(ObjectMapper mapper, ConfigurationProperties config, EventBus bus) {
 		this.mapper = mapper;
 		this.config = config;
 		try (Stream<Path> fileWalk = Files.walk(Paths.get(config.getStoreDir()), 1)){
@@ -38,7 +41,7 @@ public class FileStoreFactory {
 				.map(f -> f.getName(0).toString().split("\\.log")[0])
 				
 				.forEach(n -> {
-					fileStores.put(new EventType(n), new LogbackFileStoreWriter(new EventType(n), mapper, config));
+					fileStores.put(new EventType(n), new LogbackFileStoreWriter(new EventType(n), mapper, config, bus));
 					readers.put(new EventType(n), new LocalFileStoreReader(mapper, new EventType(n), config));
 				});
 				
@@ -55,7 +58,7 @@ public class FileStoreFactory {
 	public FileStoreWriter getFileStore(EventType type) {
 		FileStoreWriter store;
 		if (!fileStores.containsKey(type)) {
-			store = new LogbackFileStoreWriter(type, mapper, config);
+			store = new LogbackFileStoreWriter(type, mapper, config, bus);
 			fileStores.put(type, store);
 			readers.put(type, getFileReader(type));
 		} else {

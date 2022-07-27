@@ -84,6 +84,21 @@ class LogbackFileStoreTest {
 	}
 	
 	@Test
+    void appendTwoEventsWithSameAsyncStore() throws VerificationException {
+	    ConfigurationProperties asyncConfig = ConfigurationProperties.builder()
+				.withStoreArchivePattern("%d{"+ LOG_ARCHIVE_PATTERN + "}")
+				.withStoreDir(LOG_DIR.toString())
+				.withLogAsync(true)
+				.build();
+		EventType type = new EventType("twoEventsWithSameAsyncStore");
+		LogbackFileStore store = new LogbackFileStore(type, new ObjectMapper(), asyncConfig);
+		store.append("testdata1");
+		store.append("testdata2");
+		assertLogFileExistsFor(store);
+		store.verify(2);
+	}
+	
+	@Test
     void appendMultipleEventsWithTwoStores() throws VerificationException {
 		final int ENTRIES = 100;
 		EventType type2 = new EventType("MultipleEventsWithTwoStores");

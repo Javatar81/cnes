@@ -1,5 +1,6 @@
 package org.cnes.jstore.api;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,7 +11,10 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.cnes.jstore.FileStoreFactory;
 import org.cnes.jstore.model.Event;
@@ -53,11 +57,13 @@ public class FileStoreResource {
     @POST
     @NonBlocking
     @Consumes(MediaType.APPLICATION_JSON)
-    public void post(@PathParam("eventType") String eventType, EventBody body) {
+    public Response post(@PathParam("eventType") String eventType, @Context UriInfo uriInfo, EventBody body) {
+    	URI uri = uriInfo.getAbsolutePathBuilder().build();
     	registry.counter("org.cnes.events.stored." + eventType).increment();
     	EventType type = new EventType(eventType);
     	FileStoreWriter fileStore = storeFactory.getFileStore(type);
     	fileStore.append(body.getPayload().toString());
+    	return Response.created(uri).build();
     }
     
     @DELETE

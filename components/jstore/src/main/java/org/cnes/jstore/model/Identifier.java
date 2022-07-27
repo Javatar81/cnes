@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.cnes.jstore.store.LogbackFileStore;
+import org.cnes.jstore.store.LogbackFileStoreWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +13,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Identifier implements Serializable {
-	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStore.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStoreWriter.class);
 	private static final long serialVersionUID = 1L;
 	
 	@JsonProperty("value")

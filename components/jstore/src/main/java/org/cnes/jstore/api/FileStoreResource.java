@@ -15,7 +15,8 @@ import javax.ws.rs.core.MediaType;
 import org.cnes.jstore.FileStoreFactory;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
-import org.cnes.jstore.store.FileStore;
+import org.cnes.jstore.store.FileStoreReader;
+import org.cnes.jstore.store.FileStoreWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.smallrye.common.annotation.NonBlocking;
@@ -36,8 +37,8 @@ public class FileStoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Optional<Event> peek(@PathParam("eventType") String eventType) {
     	EventType type = new EventType(eventType);
-    	FileStore fileStore = storeFactory.getFileStore(type);
-    	return fileStore.peek();
+    	FileStoreReader reader = storeFactory.getFileReader(type);
+    	return reader.peek();
     }
     
     @GET
@@ -45,8 +46,8 @@ public class FileStoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public List<Event> top(@PathParam("eventType") String eventType, @PathParam("number") int number) {
     	EventType type = new EventType(eventType);
-    	FileStore fileStore = storeFactory.getFileStore(type);
-    	return fileStore.top(number);
+    	FileStoreReader reader = storeFactory.getFileReader(type);
+    	return reader.top(number);
     }
     
     @POST
@@ -55,7 +56,7 @@ public class FileStoreResource {
     public void post(@PathParam("eventType") String eventType, EventBody body) {
     	registry.counter("org.cnes.events.stored." + eventType).increment();
     	EventType type = new EventType(eventType);
-    	FileStore fileStore = storeFactory.getFileStore(type);
+    	FileStoreWriter fileStore = storeFactory.getFileStore(type);
     	fileStore.append(body.getPayload().toString());
     }
     

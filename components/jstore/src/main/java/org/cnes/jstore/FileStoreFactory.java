@@ -12,8 +12,10 @@ import javax.enterprise.context.ApplicationScoped;
 
 import org.cnes.jstore.api.StoreListEntry;
 import org.cnes.jstore.model.EventType;
-import org.cnes.jstore.store.FileStore;
-import org.cnes.jstore.store.LogbackFileStore;
+import org.cnes.jstore.store.FileStoreReader;
+import org.cnes.jstore.store.FileStoreWriter;
+import org.cnes.jstore.store.LocalFileStoreReader;
+import org.cnes.jstore.store.LogbackFileStoreWriter;
 import org.cnes.jstore.store.ReadingException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ApplicationScoped
 public class FileStoreFactory {
 	
-	private Map<EventType, FileStore> fileStores = new HashMap<>();
+	private Map<EventType, FileStoreWriter> fileStores = new HashMap<>();
+	private Map<EventType, FileStoreReader> readers = new HashMap<>();
 	private ObjectMapper mapper;
 	private ConfigurationProperties config;
 	
@@ -33,21 +36,43 @@ public class FileStoreFactory {
 				.map(Path::getFileName)
 				.filter(f -> f.toString().endsWith(".log"))
 				.map(f -> f.getName(0).toString().split("\\.log")[0])
-				.forEach(n -> fileStores.put(new EventType(n), new LogbackFileStore(new EventType(n), mapper, config)));
+				
+				.forEach(n -> {
+					fileStores.put(new EventType(n), new LogbackFileStoreWriter(new EventType(n), mapper, config));
+					readers.put(new EventType(n), new LocalFileStoreReader(mapper, new EventType(n), config));
+				});
+				
 		} catch (IOException e) {
 			throw new ReadingException(e);
 		}
 	}
 	
-	public FileStore getFileStore(EventType type) {
-		FileStore store;
+	/**
+	 * Lazy inits the file store writer and reader.
+	 * @param type
+	 * @return
+	 */
+	public FileStoreWriter getFileStore(EventType type) {
+		FileStoreWriter store;
 		if (!fileStores.containsKey(type)) {
-			store = new LogbackFileStore(type, mapper, config);
+			store = new LogbackFileStoreWriter(type, mapper, config);
 			fileStores.put(type, store);
+			readers.put(type, getFileReader(type));
 		} else {
 			store = fileStores.get(type);
 		}
 		return store;
+	}
+	
+	public FileStoreReader getFileReader(EventType type) {
+		FileStoreReader reader;
+		if (!readers.containsKey(type)) {
+			reader = new LocalFileStoreReader(mapper, type, config);
+			readers.put(type, reader);
+		} else {
+			reader = readers.get(type);
+		}
+		return reader;
 	}
 	
 	public void removeFileStore(EventType type) {
@@ -58,7 +83,7 @@ public class FileStoreFactory {
 	
 	public Stream<StoreListEntry> getAllStores() throws IOException {
 		return fileStores.values().stream()
-			.map(s -> new StoreListEntry(s.getType().toString(), s.size()));
+			.map(s -> new StoreListEntry(s.getType().toString(), getFileReader(s.getType()).size()));
 	}
 
 }

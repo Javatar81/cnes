@@ -37,8 +37,8 @@ public class InfinispanWriter {
 			+ "  <locking isolation=\"REPEATABLE_READ\"/>\n"
 			+ "  <transaction mode=\"FULL_XA\"\n"
 			+ "               locking=\"OPTIMISTIC\"/>\n"
-			+ "  <expiration lifespan=\"5000\"\n"
-			+ "              max-idle=\"1000\" />\n"
+			//+ "  <expiration lifespan=\"5000\"\n"
+			//+ "              max-idle=\"1000\" />\n"
 			+ "  <memory max-count=\"1000000\"\n"
 			+ "          when-full=\"REMOVE\"/>\n"
 			//+ "  <indexing enabled=\"true\"\n"
@@ -65,17 +65,26 @@ public class InfinispanWriter {
 	}
 
 	@ConsumeEvent("createdStore")
-	public void consume(EventType type) {
+	public void consumeCreatedStore(EventType type) {
 		if (this.remoteCacheManager != null) {
 			LOGGER.debug("Creating cache for store {}", type);
 			remoteCacheManager.administration().getOrCreateCache(type.toString(), xmlConfig);
 			LOGGER.debug("Cache created");
 		}
 	}
+	
+	@ConsumeEvent("deletedStore")
+	public void consumeDeletedStore(EventType type) {
+		if (this.remoteCacheManager != null) {
+			remoteCacheManager.administration().removeCache(type.toString());
+			LOGGER.debug("Cache removed");
+		}
+	}
 
 	@ConsumeEvent("appendedEvent")
 	public void consumeAppendEvents(Event event) {
 		if (this.remoteCacheManager != null) {
+			LOGGER.debug("Writing {} to cache ", event);
 			RemoteCache<Object, Object> cache = remoteCacheManager.administration().getOrCreateCache(event.getType().toString(), xmlConfig);
 			CachedEvent cachedEvent = new CachedEvent(event.getId().toString(), event.getCreated().toEpochSecond(ZoneOffset.UTC), event.getData());
 			cache.put(event.getId().toString(), cachedEvent);

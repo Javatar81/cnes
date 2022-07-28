@@ -10,9 +10,20 @@ public interface FileStoreReader {
 	
 	List<Event> top(int n);
 
-	Optional<Event> peek();
+	default Optional<Event> peek() {
+		List<Event> top = top(1);
+		if (!top.isEmpty()) {
+			return Optional.of(top.get(0));
+		} else {
+			return Optional.empty();
+		}
+	}
 
-	void verify(int n) throws VerificationException;
+	default void verify(int n) throws VerificationException {
+		for (Event event : top(n)) {
+			event.verify();
+		}
+	}
 
 	long size();
 

@@ -42,6 +42,7 @@ class LogbackFileStoreTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(LogbackFileStoreWriter.class);
 	private static ConfigurationProperties config;
 	private static final String LOG_ARCHIVE_PATTERN ="yyyy-MM-dd";
+	private static DateTimeFormatter TEST_OUTPUT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS");
 	private static EventBus bus = new EventBus(null) {
 		@Override
 		public EventBus publish(String message, Object event) {
@@ -157,8 +158,9 @@ class LogbackFileStoreTest {
 			int i = top.indexOf(evt);
 			assertEquals("dummy" + (1000 -1 - i), evt.getData());
 			LocalDateTime previousDate = previous.map(Event::getCreated).orElse(evt.getCreated());
-			assertFalse(previousDate.isAfter(evt.getCreated()), 
-					String.format("Event %d hast timestamp before previous", i));
+			assertFalse(previousDate.isBefore(evt.getCreated()), 
+					String.format("Event %d has timestamp %s before %s", i, TEST_OUTPUT_FORMAT.format(evt.getCreated()), TEST_OUTPUT_FORMAT.format(previousDate)));
+			previous = Optional.of(evt);
 			
 		}
 	}

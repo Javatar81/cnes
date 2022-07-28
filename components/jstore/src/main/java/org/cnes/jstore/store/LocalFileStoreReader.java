@@ -55,13 +55,6 @@ public class LocalFileStoreReader implements FileStoreReader{
 	}
 	
 	@Override
-	public void verify(int n) throws VerificationException {
-		for (Event event : top(n)) {
-			event.verify();
-		}
-	}
-	
-	@Override
 	public long size() {
 		long size = 0;
 		try(Stream<String> lines = Files.lines(meta.fileStorePath())) {

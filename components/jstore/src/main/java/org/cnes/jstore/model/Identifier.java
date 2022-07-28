@@ -20,7 +20,7 @@ public class Identifier implements Serializable {
 	private final String value;
 	
 	@JsonCreator
-	private Identifier(@JsonProperty("value") String value) {
+	public Identifier(@JsonProperty("value") String value) {
 		this.value = value; 
 	}
 	

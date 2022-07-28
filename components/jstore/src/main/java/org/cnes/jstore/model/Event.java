@@ -29,26 +29,41 @@ public final class Event implements Serializable{
 	private final EventType type;
 	
 	@JsonCreator
-	Event(@JsonProperty("created") long created, @JsonProperty("data") String data, @JsonProperty("id") Identifier id, @JsonProperty("predecessor") Identifier predecessor) {
+    Event(@JsonProperty("created") long created, @JsonProperty("data") String data, @JsonProperty("id") Identifier id, @JsonProperty("predecessor") Identifier predecessor) {
+		this(created, null, data, id, predecessor);
+	}
+	
+	
+	public Event(long created, EventType type, String data, Identifier id, Identifier predecessor) {
 		super();
 		this.created = created;
 		this.data = data;
 		this.id = id;
 		this.predecessor = predecessor;
-		this.type = null;
+		this.type = type;
 	}
+	
+	
 	
 	public Event(EventType type, String data) {
 		this(type, data, Optional.empty());
 	}
 
 	public Event(EventType type, String data, Optional<Event> predecessor) {
-		LocalDateTime now = LocalDateTime.now();
-		this.created = now.toInstant(ZoneOffset.UTC).toEpochMilli();
+		this(LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli(), type, data, predecessor);
+	}
+	
+	public Event(long created, EventType type, String data, Optional<Event> predecessor) {
+		this.created = created;
 		this.type = type;
 		this.data = data;
 		this.predecessor = predecessor.map(Event::getId).orElse(null);
-		this.id = Identifier.create(this.created, this.data, Optional.ofNullable(this.predecessor));
+		this.id = generateId();
+	}
+
+
+	public Identifier generateId() {
+		return Identifier.create(this.created, this.data, Optional.ofNullable(this.predecessor));
 	}
 	
 	public String getData() {

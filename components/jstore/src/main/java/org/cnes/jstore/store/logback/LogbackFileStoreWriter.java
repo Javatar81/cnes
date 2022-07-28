@@ -143,6 +143,7 @@ public class LogbackFileStoreWriter implements FileStoreWriter{
 	public void delete() {
 		try {
 			Files.delete(meta.fileStorePath());
+			bus.publish("deletedStore", type);
 		} catch (IOException e) {
 			throw new WritingException(e);
 		}

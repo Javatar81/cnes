@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 import org.cnes.jstore.ConfigurationProperties;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
+import org.cnes.jstore.store.logback.LogbackFileStoreWriter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

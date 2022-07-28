@@ -15,8 +15,8 @@ import org.cnes.jstore.model.EventType;
 import org.cnes.jstore.store.FileStoreReader;
 import org.cnes.jstore.store.FileStoreWriter;
 import org.cnes.jstore.store.LocalFileStoreReader;
-import org.cnes.jstore.store.LogbackFileStoreWriter;
 import org.cnes.jstore.store.ReadingException;
+import org.cnes.jstore.store.logback.LogbackFileStoreWriter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

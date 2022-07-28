@@ -6,7 +6,7 @@ import java.nio.file.Paths;
 
 import org.cnes.jstore.model.EventType;
 
-class FileStoreMeta {
+public class FileStoreMeta {
 	private final Path storeDir;
 	private final EventType type;
 	
@@ -16,11 +16,11 @@ class FileStoreMeta {
 		this.type = type;
 	}
 	
-	Path dirStorePath() {
+	public Path dirStorePath() {
 		return storeDir;
 	}
 
-	Path fileStorePath() {
+	public Path fileStorePath() {
 		return storeDir.resolve(Paths.get(getLogFileName()));
 	}
 
@@ -28,11 +28,11 @@ class FileStoreMeta {
 		return type + ".log";
 	}
 
-	Path getArchiveFolder() {
+	public Path getArchiveFolder() {
 		return storeDir.resolve("archived");
 	}
 	
-	boolean isArchivedFiles() {
+	public boolean isArchivedFiles() {
 		return Files.exists(getArchiveFolder());
 	}
 }

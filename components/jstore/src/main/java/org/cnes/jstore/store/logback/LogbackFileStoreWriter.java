@@ -1,4 +1,4 @@
-package org.cnes.jstore.store;
+package org.cnes.jstore.store.logback;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,6 +8,9 @@ import java.util.Optional;
 import org.cnes.jstore.ConfigurationProperties;
 import org.cnes.jstore.model.Event;
 import org.cnes.jstore.model.EventType;
+import org.cnes.jstore.store.FileStoreMeta;
+import org.cnes.jstore.store.FileStoreWriter;
+import org.cnes.jstore.store.WritingException;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

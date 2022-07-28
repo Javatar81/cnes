@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.cnes.jstore.store.LogbackFileStoreWriter;
+import org.cnes.jstore.store.logback.LogbackFileStoreWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

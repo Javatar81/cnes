@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 import io.quarkus.vertx.ConsumeEvent;
 
 @ApplicationScoped
-public class InfinispanClient {
-	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(InfinispanClient.class);
+public class InfinispanWriter {
+	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(InfinispanWriter.class);
 	private final RemoteCacheManager remoteCacheManager;
 	private static final String xml = ""
 			+ "<infinispan>\n"
@@ -56,7 +56,7 @@ public class InfinispanClient {
 	private final XMLStringConfiguration xmlConfig = new XMLStringConfiguration(xml);
 
 	@Inject
-	public InfinispanClient(RemoteCacheManager remoteCacheManager) {
+	public InfinispanWriter(RemoteCacheManager remoteCacheManager) {
 		super();
 		this.remoteCacheManager = remoteCacheManager;
 		if (this.remoteCacheManager == null) {

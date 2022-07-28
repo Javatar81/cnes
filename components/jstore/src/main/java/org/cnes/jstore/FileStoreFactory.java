@@ -16,7 +16,9 @@ import org.cnes.jstore.store.FileStoreReader;
 import org.cnes.jstore.store.FileStoreWriter;
 import org.cnes.jstore.store.LocalFileStoreReader;
 import org.cnes.jstore.store.ReadingException;
+import org.cnes.jstore.store.infinispan.InfinispanReader;
 import org.cnes.jstore.store.logback.LogbackFileStoreWriter;
+import org.infinispan.client.hotrod.RemoteCacheManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -28,12 +30,15 @@ public class FileStoreFactory {
 	private Map<EventType, FileStoreWriter> fileStores = new HashMap<>();
 	private Map<EventType, FileStoreReader> readers = new HashMap<>();
 	private ObjectMapper mapper;
-	private ConfigurationProperties config;
-	private EventBus bus;
+	private final ConfigurationProperties config;
+	private final EventBus bus;
+	private final RemoteCacheManager cacheManager;
 	
-	public FileStoreFactory(ObjectMapper mapper, ConfigurationProperties config, EventBus bus) {
+	public FileStoreFactory(ObjectMapper mapper, ConfigurationProperties config, EventBus bus, RemoteCacheManager cacheManager) {
 		this.mapper = mapper;
 		this.config = config;
+		this.bus = bus;
+		this.cacheManager = cacheManager;
 		try (Stream<Path> fileWalk = Files.walk(Paths.get(config.getStoreDir()), 1)){
 			fileWalk
 				.map(Path::getFileName)
@@ -42,12 +47,24 @@ public class FileStoreFactory {
 				
 				.forEach(n -> {
 					fileStores.put(new EventType(n), new LogbackFileStoreWriter(new EventType(n), mapper, config, bus));
-					readers.put(new EventType(n), new LocalFileStoreReader(mapper, new EventType(n), config));
+					readers.put(new EventType(n), createReader(mapper, new EventType(n), config));
 				});
 				
 		} catch (IOException e) {
 			throw new ReadingException(e);
 		}
+	}
+
+	private FileStoreReader createReader(ObjectMapper mapper, EventType type, ConfigurationProperties config) {
+		switch (config.getReaderStrategy()) {
+		case LOCAL:
+			return new LocalFileStoreReader(mapper, type, config);
+		case INFINISPAN:
+			return new InfinispanReader(type, cacheManager);
+		default:
+			throw new IllegalArgumentException("No reader implemented for strategy " +config.getReaderStrategy());
+		}
+		
 	}
 	
 	/**
@@ -70,7 +87,7 @@ public class FileStoreFactory {
 	public FileStoreReader getFileReader(EventType type) {
 		FileStoreReader reader;
 		if (!readers.containsKey(type)) {
-			reader = new LocalFileStoreReader(mapper, type, config);
+			reader = createReader(mapper, type, config);
 			readers.put(type, reader);
 		} else {
 			reader = readers.get(type);

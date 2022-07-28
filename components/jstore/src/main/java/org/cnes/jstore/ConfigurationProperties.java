@@ -15,6 +15,8 @@ public class ConfigurationProperties {
 	boolean logAsync;
 	@ConfigProperty(name = "org.cnes.jstore.log.async.flush-time", defaultValue = "1000")
 	int asyncFlushTime;
+	@ConfigProperty(name = "org.cnes.jstore.log.reader-strategy", defaultValue = "local")
+	ReaderStrategy readerStrategy;
 
 	@Generated("SparkTools")
 	private ConfigurationProperties(Builder builder) {
@@ -22,6 +24,7 @@ public class ConfigurationProperties {
 		this.storeArchivePattern = builder.storeArchivePattern;
 		this.logAsync = builder.logAsync;
 		this.asyncFlushTime = builder.asyncFlushTime;
+		this.readerStrategy = builder.readerStrategy;
 	}
 
 	public ConfigurationProperties() {
@@ -43,6 +46,14 @@ public class ConfigurationProperties {
 	public int getAsyncFlushTime() {
 		return asyncFlushTime;
 	}
+	
+	public ReaderStrategy getReaderStrategy() {
+		return readerStrategy;
+	}
+
+	public void setReaderStrategy(ReaderStrategy readerStrategy) {
+		this.readerStrategy = readerStrategy;
+	}
 
 	@Override
 	public String toString() {
@@ -62,6 +73,7 @@ public class ConfigurationProperties {
 		private String storeArchivePattern;
 		private boolean logAsync;
 		private int asyncFlushTime;
+		private ReaderStrategy readerStrategy;
 
 		private Builder() {
 		}
@@ -83,6 +95,11 @@ public class ConfigurationProperties {
 
 		public Builder withAsyncFlushTime(int asyncFlushTime) {
 			this.asyncFlushTime = asyncFlushTime;
+			return this;
+		}
+
+		public Builder withReaderStrategy(ReaderStrategy readerStrategy) {
+			this.readerStrategy = readerStrategy;
 			return this;
 		}
 

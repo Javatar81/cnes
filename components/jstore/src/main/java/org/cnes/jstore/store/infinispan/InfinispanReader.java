@@ -57,7 +57,7 @@ public class InfinispanReader implements FileStoreReader{
 
 	@Override
 	public long size() {
-		return cache.size();
+		return getCache().size();
 	}
 
 	@Override

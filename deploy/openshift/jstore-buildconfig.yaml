@@ -38,6 +38,8 @@ spec:
           value: 'true'
         - name: MAVEN_S2I_ARTIFACT_DIRS
           value: target/quarkus-app
+        - name: quarkus.infinispan-client.health.enabled
+          value: 'false'
   postCommit: {}
   source:
     type: Git
